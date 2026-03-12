@@ -3,22 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <title>MindChamp's Python Lab</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.10.5/brython.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.10.5/brython_stdlib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/brython@3.12.4/brython.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/brython@3.12.4/brython_stdlib.js"></script>
     <style>
         :root { --accent: #3776ab; --yellow: #ffd43b; }
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #2d2d2d; color: white; font-family: sans-serif; overflow: hidden; }
         header { height: 50px; background: #333; display: flex; align-items: center; padding: 0 20px; border-bottom: 2px solid var(--accent); justify-content: space-between; }
         .container { display: flex; height: calc(100vh - 50px); width: 100%; }
         .editor-container { width: 50%; display: flex; flex-direction: column; border-right: 2px solid #111; }
-        textarea { flex: 1; background: #1e1e1e; color: #9cdcfe; border: none; padding: 20px; font-family: monospace; font-size: 16px; outline: none; resize: none; }
+        textarea { flex: 1; background: #1e1e1e; color: #9cdcfe; border: none; padding: 20px; font-family: 'Consolas', monospace; font-size: 16px; outline: none; }
         .output-container { width: 50%; background: #000; display: flex; flex-direction: column; position: relative; }
-        #console { flex: 1; padding: 20px; font-family: monospace; color: #fff; overflow-y: auto; white-space: pre-wrap; font-size: 14px; }
+        #console { flex: 1; padding: 20px; font-family: monospace; color: #fff; overflow-y: auto; white-space: pre-wrap; z-index: 1; }
         
-        /* This is the white box where turtle lives */
+        /* The drawing area - This MUST have an ID for Turtle to find */
         #turtle-div { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background-color: white; display: none; z-index: 5;
+            background-color: white; display: none; z-index: 10;
         }
         .btn-run { background: #2ecc71; color: white; border: none; padding: 8px 20px; cursor: pointer; font-weight: bold; border-radius: 4px; }
     </style>
@@ -27,7 +27,7 @@
 
 <header>
     <div style="font-weight:bold; color:var(--yellow)">MindChamp's Python Lab</div>
-    <div style="display: flex; gap: 15px; align-items: center;">
+    <div style="display:flex; gap:15px; align-items:center;">
         <label><input type="checkbox" id="mode-toggle"> Turtle Mode</label>
         <button class="btn-run" id="run-btn">RUN CODE</button>
     </div>
@@ -37,14 +37,12 @@
     <div class="editor-container">
         <textarea id="editor" spellcheck="false">import turtle
 
-# Setup the screen to draw in our div
-screen = turtle.Screen()
-
+# Create the turtle
 t = turtle.Turtle()
-t.color("red")
-t.shape("turtle")
-t.speed(3)
+t.color("blue")
+t.width(2)
 
+# Draw a square
 for i in range(4):
     t.forward(100)
     t.left(90)
@@ -61,22 +59,27 @@ print("Drawing finished!")</textarea>
 <script type="text/python">
 from browser import document, window
 import sys
+import turtle
 
 def run_code(ev):
-    import turtle
+    # Reset console
+    document["console"].text = "Running...\n"
     
-    document["console"].text = ""
+    # Check mode
     is_turtle = document["mode-toggle"].checked
     
     if is_turtle:
         document["turtle-div"].style.display = "block"
-        document["turtle-div"].html = "" # Clear previous SVG
-        # This tells turtle to use our specific div
+        document["turtle-div"].html = "" # Wipe the drawing area
+        
+        # LINK TURTLE TO THE DIV
+        # This is the critical line for Brython
         turtle.set_defaults(turtle_canvas_wrapper=document["turtle-div"])
         turtle.restart()
     else:
         document["turtle-div"].style.display = "none"
 
+    # Capture print() statements
     class WriteStream:
         def write(self, data):
             document["console"].text += str(data)
@@ -85,11 +88,12 @@ def run_code(ev):
     sys.stdout = sys.stderr = WriteStream()
     
     try:
-        # Run the code from the editor
+        # Run the code
         exec(document["editor"].value)
     except Exception as e:
-        print(f"Error: {e}")
+        document["console"].text += f"\nError: {e}"
 
+# Bind button to function
 document["run-btn"].bind("click", run_code)
 </script>
 </body>
