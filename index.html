@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pyodide Python Lab</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <style>
+        :root { --py-blue: #3776ab; --py-yellow: #ffd43b; --bg: #1e1e1e; --card: #2d2d2d; --text: #e0e0e0; }
+        body { font-family: 'Fira Code', monospace; background: var(--bg); color: var(--text); padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { text-align: center; border-bottom: 2px solid var(--py-blue); padding-bottom: 10px; margin-bottom: 30px; }
+        .status { font-size: 0.8em; color: var(--py-yellow); margin-bottom: 10px; }
+        h2 { color: var(--py-yellow); font-size: 1.2em; margin-top: 40px; text-transform: uppercase; letter-spacing: 1px; }
+        .card { background: var(--card); border-radius: 8px; padding: 20px; margin-bottom: 25px; border-left: 4px solid var(--py-blue); }
+        textarea { width: 100%; height: 120px; background: #121212; color: #9cdcfe; border: 1px solid #444; border-radius: 4px; padding: 12px; font-family: 'Consolas', monospace; font-size: 14px; margin-top: 10px; }
+        button { background: var(--py-blue); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px; font-weight: bold; transition: 0.3s; }
+        button:disabled { background: #555; cursor: wait; }
+        button:hover:not(:disabled) { background: #4b8bbe; }
+        .console { margin-top: 15px; padding: 12px; background: #000; border-radius: 4px; font-size: 13px; min-height: 20px; border: 1px solid #333; white-space: pre-wrap; color: #fff; }
+        .error { color: #f44336; border-color: #f44336; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Python Learning Lab</h1>
+        <div id="status" class="status">⚡ Loading Python Engine (Pyodide)...</div>
+    </div>
+
+    <div id="app"></div>
+</div>
+
+<script>
+    let pyodide;
+
+    // The full list of 20 challenges
+    const challenges = [
+        { id: 1, section: "Section A: Basics", q: "Print 'Hello Python'" },
+        { id: 2, section: "Section A", q: "Input name and print 'Hello <name>, welcome to Python!'" },
+        { id: 3, section: "Section A", q: "Take two numbers and print their sum." },
+        { id: 4, section: "Section A", q: "Find the area of a rectangle (length * width)." },
+        { id: 5, section: "Section A", q: "Check if a number is even or odd." },
+        { id: 8, section: "Section B: Loops", q: "Print 1 to 10 using a for loop." },
+        { id: 20, section: "Section D: Thinking", q: "Print the star pattern (1 to 4 stars)." }
+        // Add remaining IDs here similarly...
+    ];
+
+    async function initPyodide() {
+        pyodide = await loadPyodide();
+        document.getElementById('status').innerText = "✅ Python Engine Ready";
+        document.querySelectorAll('button').forEach(btn => btn.disabled = false);
+    }
+
+    function render() {
+        const app = document.getElementById('app');
+        let currentSec = "";
+        
+        challenges.forEach(ch => {
+            if(ch.section !== currentSec) {
+                const h = document.createElement('h2');
+                h.innerText = ch.section;
+                app.appendChild(h);
+                currentSec = ch.section;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `
+                <div><strong>${ch.id}.</strong> ${ch.q}</div>
+                <textarea id="code-${ch.id}" spellcheck="false" placeholder="Write Python here..."></textarea>
+                <button id="btn-${ch.id}" onclick="runPython(${ch.id})" disabled>Run Code</button>
+                <div id="out-${ch.id}" class="console">Output will appear here...</div>
+            `;
+            app.appendChild(div);
+        });
+    }
+
+    async function runPython(id) {
+        const code = document.getElementById(`code-${id}`).value;
+        const out = document.getElementById(`out-${id}`);
+        out.classList.remove('error');
+        out.innerText = "Running...";
+
+        // Handle Python's input() by redirecting it to browser prompt
+        pyodide.setInterruptBuffer(new Int32Array(new SharedArrayBuffer(4)));
+        pyodide.registerJsModule("js_input", {
+            input: (msg) => prompt(msg) || ""
+        });
+
+        const wrappedCode = `
+import js_input
+def input(prompt=""): return js_input.input(prompt)
+${code}
+        `;
+
+        try {
+            // Capture standard output
+            pyodide.runPython(`
+                import sys
+                import io
+                sys.stdout = io.StringIO()
+            `);
+            
+            await pyodide.runPythonAsync(wrappedCode);
+            
+            const stdout = pyodide.runPython("sys.stdout.getvalue()");
+            out.innerText = stdout || "(Code executed with no output)";
+        } catch (err) {
+            out.classList.add('error');
+            out.innerText = err.message;
+        }
+    }
+
+    initPyodide();
+    render();
+</script>
+
+</body>
+</html>
