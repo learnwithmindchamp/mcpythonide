@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MindChamp's Python Lab</title>
-    <script src="https://cdn.jsdelivr.net/npm/brython@3.12.4/brython.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/brython@3.12.4/brython_stdlib.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.10.7/brython.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.10.7/brython_stdlib.min.js"></script>
     <style>
         :root { --accent: #3776ab; --yellow: #ffd43b; --editor-bg: #1e1e1e; }
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #2d2d2d; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
@@ -25,8 +25,9 @@
         .output-container { width: 50%; background: #000; display: flex; flex-direction: column; position: relative; }
         .console-header { background: #252526; padding: 10px 15px; font-size: 0.75rem; color: #888; text-transform: uppercase; }
         #console { flex: 1; padding: 20px; font-family: 'Consolas', monospace; font-size: 15px; color: #fff; overflow-y: auto; white-space: pre-wrap; }
-        /* Target for Turtle Graphics */
-        #turtle-div { position: absolute; top: 38px; left: 0; width: 100%; height: calc(100% - 38px); background: white; display: none; }
+        /* The Secret Sauce: A specific Canvas ID for Brython */
+        #turtle-div { position: absolute; top: 38px; left: 0; width: 100%; height: calc(100% - 38px); background: white; display: none; overflow: auto; }
+        #brython_canvas { background: white; display: block; margin: 0 auto; }
         .btn-run { background: #2ecc71; color: white; border: none; padding: 6px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; }
         .btn-reset { background: transparent; color: #ff6b6b; border: 1px solid #ff6b6b; padding: 6px 15px; border-radius: 4px; cursor: pointer; }
     </style>
@@ -50,7 +51,7 @@
     <div class="editor-container">
         <div class="toolbar">
             <button class="btn-run" id="run-btn">Run Code</button>
-            <button class="btn-reset" onclick="location.reload()">Reset</button>
+            <button class="btn-reset" onclick="location.reload()">Reset Lab</button>
         </div>
         <textarea id="editor" spellcheck="false">import turtle
 
@@ -62,38 +63,36 @@ for i in range(4):
     t.forward(100)
     t.left(90)
 
-print("Program Finished!")</textarea>
+print("Done!")</textarea>
     </div>
 
     <div class="output-container">
         <div class="console-header">Output / Console</div>
         <div id="console"></div>
-        <div id="turtle-div"></div>
+        <div id="turtle-div">
+            <canvas id="brython_canvas" width="800" height="800"></canvas>
+        </div>
     </div>
 </div>
 
 <script type="text/python">
-from browser import document, window, html
+from browser import document, window
 import sys
-import turtle
 
 def run_code(ev):
-    # 1. Clear the console
-    document["console"].text = "Running...\n"
+    # Import turtle here to catch it after stdlib loads
+    import turtle
     
-    # 2. Handle Display Modes
+    document["console"].text = "Running...\n"
     is_turtle = document["mode-toggle"].checked
     
     if is_turtle:
-        # Reset the turtle container to ensure it's clean
-        document["turtle-div"].html = "" 
         document["turtle-div"].style.display = "block"
-        turtle.set_container("turtle-div")
+        # Reset the turtle to the center of our manual canvas
         turtle.restart()
     else:
         document["turtle-div"].style.display = "none"
 
-    # 3. Redirect Output
     class WriteStream:
         def write(self, data):
             document["console"].text += str(data)
@@ -102,7 +101,6 @@ def run_code(ev):
     sys.stdout = WriteStream()
     sys.stderr = WriteStream()
     
-    # 4. Execute
     try:
         raw_code = document["editor"].value
         exec(raw_code)
