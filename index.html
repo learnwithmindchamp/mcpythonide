@@ -3,32 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <title>MindChamp's Python Lab</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.11.0/brython.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.11.0/brython_stdlib.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js" type="text/javascript"></script>
     <style>
         :root { --accent: #3776ab; --yellow: #ffd43b; }
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #2d2d2d; color: white; font-family: sans-serif; overflow: hidden; }
         header { height: 50px; background: #333; display: flex; align-items: center; padding: 0 20px; border-bottom: 2px solid var(--accent); justify-content: space-between; }
         .container { display: flex; height: calc(100vh - 50px); width: 100%; }
         .editor-side { width: 50%; display: flex; flex-direction: column; border-right: 2px solid #111; }
-        textarea { flex: 1; background: #1e1e1e; color: #9cdcfe; border: none; padding: 20px; font-family: 'Consolas', monospace; font-size: 16px; outline: none; }
-        .output-side { width: 50%; background: #000; display: flex; flex-direction: column; position: relative; }
-        #console { flex: 1; padding: 20px; font-family: monospace; color: #fff; overflow-y: auto; white-space: pre-wrap; font-size: 14px; }
-        /* High Z-Index to ensure it's on top */
-        #turtle-div { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: white; display: none; z-index: 999;
-        }
+        textarea { flex: 1; background: #1e1e1e; color: #9cdcfe; border: none; padding: 20px; font-family: 'Consolas', monospace; font-size: 16px; outline: none; resize: none; }
+        .output-side { width: 50%; background: #000; display: flex; flex-direction: column; position: relative; overflow-y: auto; }
+        #console { padding: 20px; font-family: monospace; color: #fff; white-space: pre-wrap; font-size: 14px; }
+        /* Skulpt draws into this div */
+        #turtle-canvas { background: white; width: 100%; display: none; min-height: 400px; }
         .btn-run { background: #2ecc71; color: white; border: none; padding: 8px 25px; cursor: pointer; font-weight: bold; border-radius: 4px; }
+        .controls { display: flex; gap: 15px; align-items: center; }
     </style>
 </head>
-<body onload="brython()">
+<body>
 
 <header>
     <div style="font-weight:bold; color:var(--yellow)">MindChamp's Python Lab</div>
-    <div style="display:flex; gap:15px; align-items:center;">
+    <div class="controls">
         <label><input type="checkbox" id="mode-toggle"> Turtle Mode</label>
-        <button class="btn-run" id="run-btn">RUN CODE</button>
+        <button class="btn-run" onclick="runPython()">RUN CODE</button>
     </div>
 </header>
 
@@ -39,56 +38,66 @@
 t = turtle.Turtle()
 t.shape("turtle")
 t.color("blue")
-t.width(3)
 
 for i in range(4):
     t.forward(100)
     t.left(90)
 
-print("Drawing Done!")</textarea>
+print("Logic & Drawing Complete!")</textarea>
     </div>
 
     <div class="output-side">
+        <div id="turtle-canvas"></div>
         <div id="console"></div>
-        <div id="turtle-div"></div>
     </div>
 </div>
 
-<script type="text/python">
-from browser import document, window, timer
-import sys
-import turtle
+<script type="text/javascript">
+function outf(text) {
+    var mypre = document.getElementById("console");
+    mypre.innerHTML = mypre.innerHTML + text;
+}
+function builtinRead(x) {
+    if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
+        throw "File not found: '" + x + "'";
+    return Sk.builtinFiles["files"][x];
+}
 
-def run_code(ev):
-    document["console"].text = "Preparing engine...\n"
-    is_turtle = document["mode-toggle"].checked
+function runPython() {
+    var code = document.getElementById("editor").value;
+    var consoleArea = document.getElementById("console");
+    var turtleArea = document.getElementById("turtle-canvas");
+    var isTurtle = document.getElementById("mode-toggle").checked;
+
+    consoleArea.innerHTML = '';
     
-    if is_turtle:
-        document["turtle-div"].style.display = "block"
-        document["turtle-div"].html = ""
-        # Link turtle to the div
-        turtle.set_defaults(turtle_canvas_wrapper=document["turtle-div"])
-    else:
-        document["turtle-div"].style.display = "none"
+    if(isTurtle) {
+        turtleArea.style.display = "block";
+    } else {
+        turtleArea.style.display = "none";
+    }
 
-    def execute():
-        # Redirect output
-        class WriteStream:
-            def write(self, data): document["console"].text += str(data)
-            def flush(self): pass
-        sys.stdout = sys.stderr = WriteStream()
-        
-        try:
-            if is_turtle:
-                turtle.restart()
-            exec(document["editor"].value)
-        except Exception as e:
-            document["console"].text += f"\nError: {e}"
+    Sk.pre = "console";
+    Sk.configure({
+        output: outf,
+        read: builtinRead,
+        __future__: Sk.python3
+    });
 
-    # Use a timer to wait 300ms for the UI to catch up
-    timer.set_timeout(execute, 300)
+    // Link Turtle to the Div
+    (Sk.TurtleGraphics || (Sk.TurtleGraphics = {})).target = 'turtle-canvas';
 
-document["run-btn"].bind("click", run_code)
+    var myPromise = Sk.misieval.asyncToPromise(function() {
+        return Sk.importMainWithBody("<stdin>", false, code, true);
+    });
+
+    myPromise.then(function(mod) {
+        console.log('success');
+    }, function(err) {
+        outf(err.toString());
+    });
+}
 </script>
+
 </body>
 </html>
