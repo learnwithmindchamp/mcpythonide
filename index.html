@@ -2,92 +2,151 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Python Practice Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindChamp's Python Lab</title>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
     <style>
-        :root { --py-blue: #3776ab; --bg: #121212; --card: #1e1e1e; }
-        body { font-family: 'Consolas', monospace; background: var(--bg); color: #ddd; padding: 20px; line-height: 1.5; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .card { background: var(--card); padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #333; }
-        h2 { color: #ffd43b; font-size: 1rem; margin-top: 0; }
-        textarea { width: 100%; height: 100px; background: #000; color: #9cdcfe; border: 1px solid #444; padding: 10px; box-sizing: border-box; font-family: inherit; margin: 10px 0; border-radius: 4px; }
-        button { background: var(--py-blue); color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold; }
-        button:disabled { background: #444; color: #888; cursor: not-allowed; }
-        .console { background: #000; color: #fff; padding: 12px; margin-top: 15px; border-radius: 4px; font-size: 0.9rem; white-space: pre-wrap; min-height: 20px; border: 1px dotted #444; }
-        #status { color: #ffd43b; text-align: center; margin-bottom: 20px; font-weight: bold; }
-        .error { color: #ff6b6b; }
+        :root { --accent: #3776ab; --yellow: #ffd43b; --editor-bg: #1e1e1e; --console-bg: #000; }
+        
+        body, html { 
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            background: #2d2d2d; color: white; font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+        }
+
+        header { 
+            height: 50px; background: #333; display: flex; align-items: center; 
+            padding: 0 20px; border-bottom: 2px solid var(--accent);
+            justify-content: space-between;
+        }
+
+        .brand { font-weight: bold; font-size: 1.2rem; color: var(--yellow); }
+        #status { font-size: 0.8rem; color: #aaa; }
+
+        .container { 
+            display: flex; height: calc(100vh - 50px); width: 100%; 
+        }
+
+        /* LEFT SIDE: EDITOR */
+        .editor-container { 
+            width: 50%; display: flex; flex-direction: column; 
+            border-right: 2px solid #444; 
+        }
+        
+        .toolbar { 
+            background: #3c3c3c; padding: 8px 15px; display: flex; gap: 10px; 
+        }
+
+        textarea { 
+            flex: 1; background: var(--editor-bg); color: #9cdcfe; 
+            border: none; padding: 20px; font-family: 'Consolas', 'Monaco', monospace; 
+            font-size: 16px; outline: none; resize: none; line-height: 1.5;
+        }
+
+        /* RIGHT SIDE: CONSOLE */
+        .console-container { 
+            width: 50%; background: var(--console-bg); display: flex; flex-direction: column; 
+        }
+
+        .console-header { 
+            background: #3c3c3c; padding: 8px 15px; font-size: 0.8rem; 
+            color: #888; text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        #output { 
+            flex: 1; padding: 20px; font-family: 'Consolas', monospace; 
+            font-size: 15px; color: #fff; overflow-y: auto; white-space: pre-wrap;
+        }
+
+        /* BUTTONS */
+        .btn-run { 
+            background: #2ecc71; color: white; border: none; padding: 5px 20px; 
+            border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s;
+        }
+        .btn-run:hover { background: #27ae60; }
+        .btn-run:disabled { background: #555; cursor: wait; }
+        
+        .btn-clear { 
+            background: transparent; color: #aaa; border: 1px solid #555; 
+            padding: 5px 15px; border-radius: 4px; cursor: pointer;
+        }
+        .btn-clear:hover { border-color: #888; color: white; }
+
+        .error-text { color: #ff6b6b; }
     </style>
 </head>
 <body>
 
+<header>
+    <div class="brand">MindChamp's Python Lab</div>
+    <div id="status">⚡ Loading Engine...</div>
+</header>
+
 <div class="container">
-    <div id="status">⏳ Loading Python Environment...</div>
-    <div id="app"></div>
+    <div class="editor-container">
+        <div class="toolbar">
+            <button id="run-btn" class="btn-run" onclick="runPython()" disabled>Run (Ctrl+Enter)</button>
+            <button class="btn-clear" onclick="clearAll()">Clear</button>
+        </div>
+        <textarea id="editor" spellcheck="false" placeholder="Write your code here..."># Section A - Question 1
+print("Hello Python")
+</textarea>
+    </div>
+
+    <div class="console-container">
+        <div class="console-header">Console Output</div>
+        <div id="output">Output will appear here...</div>
+    </div>
 </div>
 
 <script>
-    const questions = [
-        { id: 1, q: "1. Print 'Hello Python'", default: "print('Hello Python')" },
-        { id: 2, q: "2. Input Name & Greet", default: "name = input('Enter name: ')\nprint(f'Hello {name}, welcome to Python!')" },
-        { id: 3, q: "3. Sum of Two Numbers", default: "num1 = int(input('First number: '))\nnum2 = int(input('Second number: '))\nprint(f'The sum is: {num1 + num2}')" }
-    ];
-
     let pyodide;
 
     async function init() {
         try {
             pyodide = await loadPyodide();
-            document.getElementById('status').innerText = "✅ Python Engine Ready!";
-            render();
+            document.getElementById('status').innerText = "✅ Ready";
+            document.getElementById('run-btn').disabled = false;
         } catch (e) {
-            document.getElementById('status').innerText = "❌ Failed to load Python.";
+            document.getElementById('status').innerText = "❌ Load Error";
         }
     }
 
-    function render() {
-        const app = document.getElementById('app');
-        questions.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'card';
-            div.innerHTML = `
-                <h2>${item.q}</h2>
-                <textarea id="code-${item.id}" spellcheck="false">${item.default}</textarea>
-                <button onclick="runCode(${item.id})">Run Code</button>
-                <div id="out-${item.id}" class="console">Output will appear here...</div>
-            `;
-            app.appendChild(div);
-        });
-    }
+    async function runPython() {
+        const code = document.getElementById('editor').value;
+        const out = document.getElementById('output');
+        out.innerText = "Running...\n";
 
-    async function runCode(id) {
-        const code = document.getElementById(`code-${id}`).value;
-        const out = document.getElementById(`out-${id}`);
-        out.innerText = "Running...";
-        out.classList.remove('error');
-
-        // This is the magic: redefining input() to work without SharedArrayBuffers
-        const setupCode = `
-import sys
-import io
-
-# Mock input to use JS prompt
-def input(prompt_msg=""):
-    from js import window
-    return window.prompt(prompt_msg)
-
+        // Setup the print redirection and prompt-based input
+        const setup = `
+import sys, io
+from js import window
+def input(p=""): return window.prompt(p)
 sys.stdout = io.StringIO()
 `;
 
         try {
-            await pyodide.runPythonAsync(setupCode);
+            await pyodide.runPythonAsync(setup);
             await pyodide.runPythonAsync(code);
-            const stdout = pyodide.runPython("sys.stdout.getvalue()");
-            out.innerText = stdout || "Done (No output to print)";
+            const result = pyodide.runPython("sys.stdout.getvalue()");
+            out.innerText = result || "Program finished (no output).";
         } catch (err) {
-            out.classList.add('error');
-            out.innerText = "Python Error:\n" + err.message;
+            out.innerHTML = `<span class="error-text">Python Error:\n${err.message}</span>`;
         }
     }
+
+    function clearAll() {
+        document.getElementById('output').innerText = "";
+        document.getElementById('editor').value = "";
+        document.getElementById('editor').focus();
+    }
+
+    // Keyboard Shortcut: Ctrl + Enter
+    document.addEventListener('keydown', e => {
+        if (e.ctrlKey && e.key === 'Enter') {
+            if (!document.getElementById('run-btn').disabled) runPython();
+        }
+    });
 
     init();
 </script>
