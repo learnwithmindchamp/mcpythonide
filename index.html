@@ -4,19 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MindChamp's Python Lab</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.12.0/brython.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.12.0/brython_stdlib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/brython@3.12.4/brython.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/brython@3.12.4/brython_stdlib.js"></script>
     <style>
-        :root { --accent: #3776ab; --yellow: #ffd43b; --editor-bg: #1e1e1e; --panel-bg: #252526; }
+        :root { --accent: #3776ab; --yellow: #ffd43b; --editor-bg: #1e1e1e; }
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #2d2d2d; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
-        
-        header { 
-            height: 55px; background: #333; display: flex; align-items: center; 
-            padding: 0 20px; border-bottom: 2px solid var(--accent); justify-content: space-between; 
-        }
-        .brand { font-weight: bold; font-size: 1.3rem; color: var(--yellow); letter-spacing: 1px; }
-
-        /* Mode Switch Styling */
+        header { height: 55px; background: #333; display: flex; align-items: center; padding: 0 20px; border-bottom: 2px solid var(--accent); justify-content: space-between; }
+        .brand { font-weight: bold; font-size: 1.3rem; color: var(--yellow); }
         .mode-switch { display: flex; align-items: center; gap: 10px; background: #444; padding: 5px 15px; border-radius: 20px; }
         .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -24,29 +18,17 @@
         .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--accent); }
         input:checked + .slider:before { transform: translateX(20px); }
-
         .container { display: flex; height: calc(100vh - 55px); width: 100%; }
-        
-        /* EDITOR SIDE */
         .editor-container { width: 50%; display: flex; flex-direction: column; border-right: 2px solid #111; }
-        .toolbar { background: var(--panel-bg); padding: 10px 15px; display: flex; gap: 10px; border-bottom: 1px solid #333; }
+        .toolbar { background: #252526; padding: 10px 15px; display: flex; gap: 10px; }
         textarea { flex: 1; background: var(--editor-bg); color: #9cdcfe; border: none; padding: 20px; font-family: 'Consolas', monospace; font-size: 16px; outline: none; resize: none; line-height: 1.5; }
-
-        /* OUTPUT SIDE */
         .output-container { width: 50%; background: #000; display: flex; flex-direction: column; position: relative; }
-        .console-header { background: var(--panel-bg); padding: 10px 15px; font-size: 0.75rem; color: #888; text-transform: uppercase; border-bottom: 1px solid #333; }
-        
-        #console { flex: 1; padding: 20px; font-family: 'Consolas', monospace; font-size: 15px; color: #fff; overflow-y: auto; white-space: pre-wrap; z-index: 1; }
-        
-        /* TURTLE CANVAS */
-        #turtle-div { 
-            position: absolute; top: 38px; left: 0; width: 100%; height: calc(100% - 38px); 
-            background: white; display: none; z-index: 2;
-        }
-
+        .console-header { background: #252526; padding: 10px 15px; font-size: 0.75rem; color: #888; text-transform: uppercase; }
+        #console { flex: 1; padding: 20px; font-family: 'Consolas', monospace; font-size: 15px; color: #fff; overflow-y: auto; white-space: pre-wrap; }
+        /* Target for Turtle Graphics */
+        #turtle-div { position: absolute; top: 38px; left: 0; width: 100%; height: calc(100% - 38px); background: white; display: none; }
         .btn-run { background: #2ecc71; color: white; border: none; padding: 6px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; }
-        .btn-run:hover { background: #27ae60; }
-        .btn-reset { background: transparent; color: #ff6b6b; border: 1px solid #ff6b6b; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+        .btn-reset { background: transparent; color: #ff6b6b; border: 1px solid #ff6b6b; padding: 6px 15px; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body onload="brython()">
@@ -54,27 +36,33 @@
 <header>
     <div class="brand">MindChamp's Python Lab</div>
     <div class="mode-switch">
-        <span style="font-size: 0.8rem;">Normal</span>
+        <span>Normal</span>
         <label class="switch">
-            <input type="checkbox" id="mode-toggle" onchange="toggleMode()">
+            <input type="checkbox" id="mode-toggle">
             <span class="slider"></span>
         </label>
-        <span style="font-size: 0.8rem;">Turtle</span>
+        <span>Turtle</span>
     </div>
-    <div id="status" style="color: #2ecc71; font-size: 0.8rem; font-weight: bold;">● Engine Ready</div>
+    <div id="status" style="color: #2ecc71; font-size: 0.8rem;">● Engine Ready</div>
 </header>
 
 <div class="container">
     <div class="editor-container">
         <div class="toolbar">
             <button class="btn-run" id="run-btn">Run Code</button>
-            <button class="btn-reset" onclick="location.reload()">Reset Everything</button>
+            <button class="btn-reset" onclick="location.reload()">Reset</button>
         </div>
-        <textarea id="editor" spellcheck="false"># Welcome to MindChamp!
-# Switch to Turtle mode to draw.
+        <textarea id="editor" spellcheck="false">import turtle
 
-print("Hello! Try your 20 logic questions here.")
-</textarea>
+t = turtle.Turtle()
+t.shape("turtle")
+t.color("blue")
+
+for i in range(4):
+    t.forward(100)
+    t.left(90)
+
+print("Program Finished!")</textarea>
     </div>
 
     <div class="output-container">
@@ -84,39 +72,28 @@ print("Hello! Try your 20 logic questions here.")
     </div>
 </div>
 
-<script>
-    function toggleMode() {
-        const isTurtle = document.getElementById('mode-toggle').checked;
-        const turtleDiv = document.getElementById('turtle-div');
-        const editor = document.getElementById('editor');
-        
-        if (isTurtle) {
-            turtleDiv.style.display = 'block';
-            editor.value = "import turtle\n\nt = turtle.Turtle()\nt.shape('turtle')\nt.color('blue')\n\nfor i in range(4):\n    t.forward(100)\n    t.left(90)";
-        } else {
-            turtleDiv.style.display = 'none';
-            editor.value = "print('Back to Normal Mode!')";
-        }
-    }
-</script>
-
 <script type="text/python">
-from browser import document, window
+from browser import document, window, html
 import sys
 import turtle
 
 def run_code(ev):
-    document["console"].text = ""
-    is_turtle_mode = document["mode-toggle"].checked
-    code = document["editor"].value
+    # 1. Clear the console
+    document["console"].text = "Running...\n"
     
-    if is_turtle_mode:
+    # 2. Handle Display Modes
+    is_turtle = document["mode-toggle"].checked
+    
+    if is_turtle:
+        # Reset the turtle container to ensure it's clean
+        document["turtle-div"].html = "" 
         document["turtle-div"].style.display = "block"
         turtle.set_container("turtle-div")
         turtle.restart()
     else:
         document["turtle-div"].style.display = "none"
 
+    # 3. Redirect Output
     class WriteStream:
         def write(self, data):
             document["console"].text += str(data)
@@ -125,8 +102,10 @@ def run_code(ev):
     sys.stdout = WriteStream()
     sys.stderr = WriteStream()
     
+    # 4. Execute
     try:
-        exec(code)
+        raw_code = document["editor"].value
+        exec(raw_code)
     except Exception as e:
         document["console"].text += f"\nError: {e}"
 
