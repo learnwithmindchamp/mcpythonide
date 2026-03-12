@@ -6,6 +6,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+
     <style>
         :root { --accent: #3776ab; --yellow: #ffd43b; }
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #2d2d2d; color: white; font-family: sans-serif; overflow: hidden; }
@@ -15,9 +16,9 @@
         textarea { flex: 1; background: #1e1e1e; color: #9cdcfe; border: none; padding: 20px; font-family: 'Consolas', monospace; font-size: 16px; outline: none; resize: none; }
         .output-side { width: 50%; background: #000; display: flex; flex-direction: column; position: relative; overflow-y: auto; }
         #console { padding: 20px; font-family: monospace; color: #fff; white-space: pre-wrap; font-size: 14px; }
-        /* Target for drawing */
-        #turtle-canvas { background: white; width: 100%; display: none; min-height: 500px; }
+        #turtle-canvas { background: white; width: 100%; display: none; min-height: 450px; }
         .btn-run { background: #2ecc71; color: white; border: none; padding: 8px 25px; cursor: pointer; font-weight: bold; border-radius: 4px; }
+        .btn-run:disabled { background: #555; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -25,8 +26,9 @@
 <header>
     <div style="font-weight:bold; color:var(--yellow)">MindChamp's Python Lab</div>
     <div style="display:flex; gap:15px; align-items:center;">
+        <span id="status" style="font-size: 12px; color: #888;">Loading Engine...</span>
         <label><input type="checkbox" id="mode-toggle"> Turtle Mode</label>
-        <button class="btn-run" onclick="runPython()">RUN CODE</button>
+        <button class="btn-run" id="run-btn" onclick="runPython()" disabled>RUN CODE</button>
     </div>
 </header>
 
@@ -37,14 +39,11 @@
 t = turtle.Turtle()
 t.shape("turtle")
 t.color("blue")
-t.speed(2) # Slow it down so we can see it
 
 for i in range(4):
     t.forward(100)
     t.left(90)
 
-# Critical for web-based turtle!
-turtle.done()
 print("Logic & Drawing Complete!")</textarea>
     </div>
 
@@ -55,10 +54,23 @@ print("Logic & Drawing Complete!")</textarea>
 </div>
 
 <script type="text/javascript">
+// Function to check if Skulpt is ready
+function checkSkulpt() {
+    if (typeof Sk !== "undefined" && Sk.misieval) {
+        document.getElementById("run-btn").disabled = false;
+        document.getElementById("status").innerHTML = "● Engine Ready";
+        document.getElementById("status").style.color = "#2ecc71";
+    } else {
+        setTimeout(checkSkulpt, 100);
+    }
+}
+checkSkulpt();
+
 function outf(text) {
     var mypre = document.getElementById("console");
     mypre.innerHTML = mypre.innerHTML + text;
 }
+
 function builtinRead(x) {
     if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
         throw "File not found: '" + x + "'";
@@ -75,7 +87,7 @@ function runPython() {
     
     if(isTurtle) {
         turtleArea.style.display = "block";
-        turtleArea.innerHTML = ""; // Clear canvas
+        turtleArea.innerHTML = ""; // Clear for fresh drawing
     } else {
         turtleArea.style.display = "none";
     }
@@ -87,19 +99,17 @@ function runPython() {
         __future__: Sk.python3
     });
 
-    // Configure Turtle Graphics Target
+    // Explicitly target the div for turtle graphics
     (Sk.TurtleGraphics || (Sk.TurtleGraphics = {})).target = 'turtle-canvas';
-    Sk.TurtleGraphics.width = 500;
-    Sk.TurtleGraphics.height = 500;
 
     var myPromise = Sk.misieval.asyncToPromise(function() {
         return Sk.importMainWithBody("<stdin>", false, code, true);
     });
 
     myPromise.then(function(mod) {
-        console.log('Success');
+        console.log('Execution finished');
     }, function(err) {
-        outf(err.toString());
+        outf("\n" + err.toString());
     });
 }
 </script>
